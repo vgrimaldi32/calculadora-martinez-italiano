@@ -1,62 +1,50 @@
-
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+from PIL import Image
 
-st.set_page_config(page_title="Calculadora Martinez/Italiano", layout="centered")
-st.image("logo.png", use_column_width=True)
+# Logo
+image = Image.open("logo para app.png")
+st.image(image, use_column_width=True)
+
+# Título
 st.title("CALCULADORA MARTINEZ/ITALIANO")
+st.subheader("Comparación de movilidad según ANSeS vs Justicia")
 
+# Inputs
 nombre = st.text_input("Nombre del caso")
-haber_input = st.text_input("Ingrese el haber base", "53036,00")
+haber_base = st.number_input("Ingrese el haber base", min_value=0.0, value=50000.00, step=100.0, format="%.2f")
+fecha_base = st.text_input("Fecha del haber base (YYYY-MM)", value="2020-01")
+
+# Validación de fecha
 try:
-    haber_inicial = float(haber_input.replace(",", "."))
+    fecha_base_dt = pd.to_datetime(fecha_base, format="%Y-%m")
 except ValueError:
-    st.error("⚠ Ingresá el haber en formato numérico válido (ej: 53036.00 o 53036,00)")
+    st.error("Ingresá la fecha en formato YYYY-MM (ejemplo: 2020-04)")
     st.stop()
 
-fecha_base = st.text_input("Fecha del haber base (YYYY-MM)", "2020-01")
+# Carga de coeficientes
+df_anses = pd.read_csv("movilidad anses.csv", sep=";")
+df_anses["Fecha"] = pd.to_datetime(df_anses["Fecha"], format="%Y-%m")
+df_anses = df_anses[df_anses["Fecha"] > fecha_base_dt]
 
-df_anses = pd.read_csv("coef_anses.csv", sep=";")
-df_justicia = pd.read_csv("coef_justicia.csv", sep=";")
-df_anses["coef_anses"] = df_anses["coef_anses"].astype(str).str.replace(",", ".").astype(float)
-df_justicia["coef_justicia"] = df_justicia["coef_justicia"].astype(str).str.replace(",", ".").astype(float)
+df_justicia = pd.read_csv("movilidad martinez italiano.csv", sep=";")
+df_justicia["Fecha"] = pd.to_datetime(df_justicia["Fecha"], format="%Y-%m", errors="coerce")
+df_justicia = df_justicia[df_justicia["Fecha"] >= pd.to_datetime("2020-03")]  # Ajuste solicitado
+df_justicia = df_justicia[df_justicia["Fecha"] > fecha_base_dt]
 
-df = pd.merge(df_anses, df_justicia, on="fecha")
-df["fecha"] = pd.to_datetime(df["fecha"], format="%Y-%m")
+# Cálculos
+haber_anses = haber_base * df_anses["Coeficiente anses"].prod()
+haber_justicia = haber_base * df_justicia["Coeficiente justicia"].prod()
 
-try:
-    fecha_base_dt = datetime.strptime(fecha_base, "%Y-%m")
+# Resultados
+st.markdown("### Resultados:")
+if nombre:
+    st.markdown(f"**Caso:** {nombre}")
 
-    marzo_dt = datetime.strptime("2020-03", "%Y-%m")
-    if fecha_base_dt < marzo_dt:
-        coef_marzo_2020 = 1.023 + (1500 / haber_inicial)
-        nueva_fila = pd.DataFrame([{
-            "fecha": marzo_dt,
-            "coef_anses": coef_marzo_2020,
-            "coef_justicia": coef_marzo_2020
-        }])
-        df = pd.concat([df, nueva_fila], ignore_index=True)
-        df = df.sort_values("fecha")
+st.markdown(f"**Haber actualizado según ANSeS:** ${haber_anses:,.2f}")
+st.markdown(f"**Haber actualizado según Justicia:** ${haber_justicia:,.2f}")
 
-    df_tramo = df[df["fecha"] > fecha_base_dt].copy()
-
-    if not df_tramo.empty:
-        factor_anses = df_tramo["coef_anses"].prod()
-        factor_justicia = df_tramo["coef_justicia"].prod()
-
-        haber_anses = haber_inicial * factor_anses
-        haber_justicia = haber_inicial * factor_justicia
-        diferencia = haber_justicia - haber_anses
-        diferencia_pct = (diferencia / haber_anses * 100) if haber_anses != 0 else 0
-
-        st.subheader("Resultados:")
-        if nombre:
-            st.write(f"**Caso:** {nombre}")
-        st.write(f"**Haber actualizado según ANSeS:** ${haber_anses:,.2f}")
-        st.write(f"**Haber actualizado según Justicia:** ${haber_justicia:,.2f}")
-        st.write(f"**Diferencia:** ${diferencia:,.2f} ({diferencia_pct:.2f}%%)")
-    else:
-        st.warning("No hay coeficientes posteriores a la fecha ingresada.")
-except ValueError:
-    st.error("⚠ Ingresá la fecha en formato YYYY-MM (ejemplo: 2020-04)")
+diferencia = haber_justicia - haber_anses
+porcentaje = diferencia / haber_anses * 100 if haber_anses else 0
+st.markdown(f"**Diferencia:** ${diferencia:,.2f} ({porcentaje:.2f}%)")
