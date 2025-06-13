@@ -25,7 +25,7 @@ except ValueError:
 
 # Carga de coeficientes
 df_anses = pd.read_csv("movilidad_anses.csv", sep=";")
-df_anses["Fecha"] = pd.to_datetime(df_anses["Fecha"], format="%Y-%m")
+df_anses["fecha"] = pd.to_datetime(df_anses["Fecha"], format="%Y-%m")
 df_anses = df_anses[df_anses["Fecha"] > fecha_base_dt]
 
 df_justicia = pd.read_csv("movilidad_martinez_italiano.csv", sep=";")
