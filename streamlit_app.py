@@ -4,7 +4,7 @@ from datetime import datetime
 from PIL import Image
 
 # Logo
-image = Image.open("logo para app.png")
+image = Image.open("logo_para_app.png")
 st.image(image, use_column_width=True)
 
 # Título
