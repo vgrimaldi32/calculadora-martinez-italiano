@@ -24,11 +24,11 @@ except ValueError:
     st.stop()
 
 # Carga de coeficientes
-df_anses = pd.read_csv("movilidad anses.csv", sep=";")
+df_anses = pd.read_csv("movilidad_anses.csv", sep=";")
 df_anses["Fecha"] = pd.to_datetime(df_anses["Fecha"], format="%Y-%m")
 df_anses = df_anses[df_anses["Fecha"] > fecha_base_dt]
 
-df_justicia = pd.read_csv("movilidad martinez italiano.csv", sep=";")
+df_justicia = pd.read_csv("movilidad_martinez_italiano.csv", sep=";")
 df_justicia["Fecha"] = pd.to_datetime(df_justicia["Fecha"], format="%Y-%m", errors="coerce")
 df_justicia = df_justicia[df_justicia["Fecha"] >= pd.to_datetime("2020-03")]  # Ajuste solicitado
 df_justicia = df_justicia[df_justicia["Fecha"] > fecha_base_dt]
